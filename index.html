@@ -1,144 +1,175 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Desenho ao Vivo</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>Arte Viva — Mobile</title>
 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
-  <style>
-    body {
-      margin: 0;
-      background: #111;
-      color: white;
-      text-align: center;
-      font-family: Arial;
-    }
-
-    canvas {
-      background: white;
-      touch-action: none;
-      width: 100vw;
-      height: 80vh;
-    }
-
-    .controls {
-      padding: 10px;
-    }
-
-    button {
-      padding: 10px;
-      font-size: 16px;
-    }
-  </style>
+<style>
+:root{
+  --ui-bg: rgba(0,0,0,0.55);
+  --accent: #ff6b6b;
+  --glass: rgba(255,255,255,0.06);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
+html,body{height:100%;margin:0;font-family:system-ui;color:#fff;background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);overflow:hidden;}
+.screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1rem;z-index:10;}
+.hidden{display:none}
+.start-btn{margin-top:1rem;padding:1rem 1.5rem;font-size:1.2rem;border-radius:16px;border:none;background:var(--accent);color:#fff;font-weight:700;}
+#screen-gallery{overflow-y:auto}
+.gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.8rem;width:100%;max-width:900px}
+.gallery img{width:100%;border-radius:12px}
+.app{height:100%;display:flex;flex-direction:column;align-items:center;padding:.8rem}
+#canvas-wrap{width:100%;max-width:820px;flex:1;border-radius:14px;overflow:hidden;background:#fff}
+canvas{width:100%;height:100%;touch-action:none}
+.controls{position:absolute;bottom:15px;left:50%;transform:translateX(-50%);display:flex;gap:.5rem;background:rgba(0,0,0,.3);padding:.5rem;border-radius:16px}
+.btn{background:var(--ui-bg);border:none;color:#fff;padding:.6rem .8rem;border-radius:12px}
+input[type=range]{width:80px}
+#colorPicker{width:36px;height:36px;border:none}
+</style>
 </head>
 
 <body>
 
-  <canvas id="canvas"></canvas>
+<div class="screen" id="screen-start">
+  <h1>Arte Viva</h1>
+  <button class="start-btn" id="goGallery">Vamos desenhar</button>
+</div>
 
-  <div class="controls">
-    <button id="clear">Limpar tudo</button>
+<div class="screen hidden" id="screen-gallery">
+  <h2>Galeria</h2>
+  <div class="gallery"></div>
+  <button class="start-btn" id="goDraw">Desenhar</button>
+</div>
+
+<div class="app hidden" id="app">
+  <div id="canvas-wrap">
+    <canvas id="canvas"></canvas>
+    <div class="controls">
+      <button class="btn" id="undoBtn">↩️</button>
+      <button class="btn" id="clearBtn">🧽</button>
+      <input type="range" id="sizeRange" min="1" max="60" value="6">
+      <input type="color" id="colorPicker" value="#000000">
+      <button class="btn" id="saveBtn">💾</button>
+    </div>
   </div>
+</div>
 
-  <script>
-    // 🔴 FIREBASE (SEU, SEM ALTERAR MAIS NADA)
-    const firebaseConfig = {
-      apiKey: "AIzaSyBdxd54oFM3eWH1duC5BTdJzjGGRDLMq-Q",
-      authDomain: "mary-cb817.firebaseapp.com",
-      databaseURL: "https://mary-cb817-default-rtdb.firebaseio.com",
-      projectId: "mary-cb817",
-      storageBucket: "mary-cb817.firebasestorage.app",
-      messagingSenderId: "887348832569",
-      appId: "1:887348832569:web:c6d9c32a1a1c402b8960e8"
-    };
+<!-- FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-    firebase.initializeApp(firebaseConfig);
+<script>
+// FIREBASE
+firebase.initializeApp({
+  apiKey: "AIzaSyBdxd54oFM3eWH1duC5BTdJzjGGRDLMq-Q",
+  authDomain: "mary-cb817.firebaseapp.com",
+  databaseURL: "https://mary-cb817-default-rtdb.firebaseio.com",
+  projectId: "mary-cb817",
+  storageBucket: "mary-cb817.firebasestorage.app",
+  messagingSenderId: "887348832569",
+  appId: "1:887348832569:web:c6d9c32a1a1c402b8960e8"
+});
+const db = firebase.database();
+const drawRef = db.ref("draw");
 
-    const database = firebase.database();
-    const roomRef = database.ref('sala1');
+// APP ORIGINAL
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+let drawing=false,lastX=0,lastY=0;
+const sizeRange=document.getElementById("sizeRange");
+const colorPicker=document.getElementById("colorPicker");
 
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
+function resize(){
+  const r=canvas.getBoundingClientRect();
+  canvas.width=r.width;
+  canvas.height=r.height;
+  ctx.fillStyle="#fff";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+}
+resize();
+window.onresize=resize;
 
-    function resize() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight * 0.8;
-    }
-    resize();
-    window.onresize = resize;
+function startDraw(x,y){
+  drawing=true;
+  lastX=x; lastY=y;
+}
 
-    let drawing = false;
-    let lastX = 0;
-    let lastY = 0;
+function drawTo(x,y){
+  if(!drawing) return;
 
-    function drawLine(x1, y1, x2, y2) {
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 3;
-      ctx.lineCap = 'round';
+  ctx.lineCap="round";
+  ctx.strokeStyle=colorPicker.value;
+  ctx.lineWidth=sizeRange.value;
 
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.stroke();
-    }
+  ctx.beginPath();
+  ctx.moveTo(lastX,lastY);
+  ctx.lineTo(x,y);
+  ctx.stroke();
 
-    function start(x, y) {
-      drawing = true;
-      lastX = x;
-      lastY = y;
-    }
+  drawRef.push({
+    x1:lastX,y1:lastY,x2:x,y2:y,
+    color:colorPicker.value,
+    size:sizeRange.value
+  });
 
-    function move(x, y) {
-      if (!drawing) return;
+  lastX=x; lastY=y;
+}
 
-      drawLine(lastX, lastY, x, y);
+function endDraw(){drawing=false}
 
-      roomRef.push({
-        x1: lastX,
-        y1: lastY,
-        x2: x,
-        y2: y
-      });
+canvas.addEventListener("mousedown",e=>{
+  const r=canvas.getBoundingClientRect();
+  startDraw(e.clientX-r.left,e.clientY-r.top);
+});
+canvas.addEventListener("mousemove",e=>{
+  const r=canvas.getBoundingClientRect();
+  drawTo(e.clientX-r.left,e.clientY-r.top);
+});
+canvas.addEventListener("mouseup",endDraw);
+canvas.addEventListener("mouseleave",endDraw);
 
-      lastX = x;
-      lastY = y;
-    }
+canvas.addEventListener("touchstart",e=>{
+  const t=e.touches[0];
+  const r=canvas.getBoundingClientRect();
+  startDraw(t.clientX-r.left,t.clientY-r.top);
+});
+canvas.addEventListener("touchmove",e=>{
+  const t=e.touches[0];
+  const r=canvas.getBoundingClientRect();
+  drawTo(t.clientX-r.left,t.clientY-r.top);
+});
+canvas.addEventListener("touchend",endDraw);
 
-    function stop() {
-      drawing = false;
-    }
+// RECEBER DESENHO AO VIVO
+drawRef.limitToLast(5000).on("child_added",snap=>{
+  const d=snap.val();
+  if(!d) return;
+  ctx.strokeStyle=d.color;
+  ctx.lineWidth=d.size;
+  ctx.beginPath();
+  ctx.moveTo(d.x1,d.y1);
+  ctx.lineTo(d.x2,d.y2);
+  ctx.stroke();
+});
 
-    canvas.addEventListener('mousedown', e => start(e.offsetX, e.offsetY));
-    canvas.addEventListener('mousemove', e => move(e.offsetX, e.offsetY));
-    window.addEventListener('mouseup', stop);
+// CONTROLES
+document.getElementById("clearBtn").onclick=()=>{
+  ctx.fillStyle="#fff";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  drawRef.remove();
+};
 
-    canvas.addEventListener('touchstart', e => {
-      const t = e.touches[0];
-      start(t.clientX, t.clientY);
-    });
+document.getElementById("saveBtn").onclick=()=>{
+  const a=document.createElement("a");
+  a.download="arte.png";
+  a.href=canvas.toDataURL();
+  a.click();
+};
 
-    canvas.addEventListener('touchmove', e => {
-      const t = e.touches[0];
-      move(t.clientX, t.clientY);
-    });
-
-    window.addEventListener('touchend', stop);
-
-    roomRef.on('child_added', snap => {
-      const d = snap.val();
-      drawLine(d.x1, d.y1, d.x2, d.y2);
-    });
-
-    document.getElementById('clear').onclick = () => {
-      roomRef.remove();
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    };
-  </script>
-
+// TELAS
+goGallery.onclick=()=>{screen-start.classList.add("hidden");screen-gallery.classList.remove("hidden")}
+goDraw.onclick=()=>{screen-gallery.classList.add("hidden");app.classList.remove("hidden")}
+</script>
 </body>
 </html>
