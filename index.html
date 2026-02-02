@@ -6,7 +6,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Firebase v8 (compatível com seu código) -->
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
@@ -24,7 +24,6 @@
       touch-action: none;
       width: 100vw;
       height: 80vh;
-      display: block;
     }
 
     .controls {
@@ -32,9 +31,8 @@
     }
 
     button {
-      padding: 10px 15px;
+      padding: 10px;
       font-size: 16px;
-      cursor: pointer;
     }
   </style>
 </head>
@@ -48,7 +46,7 @@
   </div>
 
   <script>
-    // 🔥 SEU FIREBASE
+    // 🔴 FIREBASE (SEU, SEM ALTERAR MAIS NADA)
     const firebaseConfig = {
       apiKey: "AIzaSyBdxd54oFM3eWH1duC5BTdJzjGGRDLMq-Q",
       authDomain: "mary-cb817.firebaseapp.com",
@@ -59,30 +57,29 @@
       appId: "1:887348832569:web:c6d9c32a1a1c402b8960e8"
     };
 
-    // Inicializa Firebase
     firebase.initializeApp(firebaseConfig);
 
     const database = firebase.database();
-    const roomRef = database.ref("sala1");
+    const roomRef = database.ref('sala1');
 
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext("2d");
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
 
     function resize() {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight * 0.8;
     }
     resize();
-    window.addEventListener("resize", resize);
+    window.onresize = resize;
 
     let drawing = false;
     let lastX = 0;
     let lastY = 0;
 
     function drawLine(x1, y1, x2, y2) {
-      ctx.strokeStyle = "#000";
+      ctx.strokeStyle = '#000';
       ctx.lineWidth = 3;
-      ctx.lineCap = "round";
+      ctx.lineCap = 'round';
 
       ctx.beginPath();
       ctx.moveTo(x1, y1);
@@ -116,32 +113,28 @@
       drawing = false;
     }
 
-    // Mouse
-    canvas.addEventListener("mousedown", e => start(e.offsetX, e.offsetY));
-    canvas.addEventListener("mousemove", e => move(e.offsetX, e.offsetY));
-    window.addEventListener("mouseup", stop);
+    canvas.addEventListener('mousedown', e => start(e.offsetX, e.offsetY));
+    canvas.addEventListener('mousemove', e => move(e.offsetX, e.offsetY));
+    window.addEventListener('mouseup', stop);
 
-    // Touch (celular)
-    canvas.addEventListener("touchstart", e => {
+    canvas.addEventListener('touchstart', e => {
       const t = e.touches[0];
       start(t.clientX, t.clientY);
     });
 
-    canvas.addEventListener("touchmove", e => {
+    canvas.addEventListener('touchmove', e => {
       const t = e.touches[0];
       move(t.clientX, t.clientY);
     });
 
-    window.addEventListener("touchend", stop);
+    window.addEventListener('touchend', stop);
 
-    // 🔴 Recebe desenho em tempo real
-    roomRef.on("child_added", snap => {
+    roomRef.on('child_added', snap => {
       const d = snap.val();
       drawLine(d.x1, d.y1, d.x2, d.y2);
     });
 
-    // Limpar tudo
-    document.getElementById("clear").onclick = () => {
+    document.getElementById('clear').onclick = () => {
       roomRef.remove();
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     };
